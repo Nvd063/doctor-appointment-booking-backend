@@ -77,7 +77,7 @@ class AppointmentController extends Controller
             'appointment_time' => $request->time,
             'status' => 'pending'
         ]);
-        
+
 
         return response()->json([
             'message' => 'Appointment booked successfully!',
@@ -161,4 +161,76 @@ class AppointmentController extends Controller
             'past_history' => $history
         ]);
     }
+
+    // AppointmentController.php k andar
+
+    public function myAppointments(Request $request)
+    {
+        // 1. Logged in Doctor ki ID nikalo
+        $doctor = $request->user();
+
+        // 2. Sirf is doctor ki appointments lao, sath ma Patient ka naam bhi
+        $appointments = Appointment::where('doctor_id', $doctor->id)
+            ->with('patient') // Patient ka data (naam, email) bhi lao
+            ->orderBy('date', 'asc') // Puraani pehlay, nayi baad ma
+            ->get();
+
+        return response()->json($appointments);
+    }
+
+    // Dashboard Stats k liye
+    public function dashboardStats(Request $request)
+    {
+        $user = $request->user();
+
+        if ($user->role === 'doctor') {
+            // Doctor k liye stats
+            $total = Appointment::where('doctor_id', $user->id)->count();
+            $pending = Appointment::where('doctor_id', $user->id)->where('status', 'pending')->count();
+            $completed = Appointment::where('doctor_id', $user->id)->where('status', 'completed')->count();
+
+            return response()->json([
+                'total' => $total,
+                'pending' => $pending,
+                'completed' => $completed
+            ]);
+        } else {
+            // Patient k liye stats
+            $total = Appointment::where('patient_id', $user->id)->count();
+            $upcoming = Appointment::where('patient_id', $user->id)
+                ->where('status', 'pending')
+                ->count();
+
+            return response()->json([
+                'total' => $total,
+                'upcoming' => $upcoming
+            ]);
+        }
+    }
+
+    // Patient apni appointment cancel kare
+    public function cancelByPatient(Request $request, $id)
+    {
+        $user = $request->user();
+
+        // Appointment dhoondo jo is patient ki ho
+        $appointment = Appointment::where('id', $id)
+                                  ->where('patient_id', $user->id)
+                                  ->first();
+
+        if (!$appointment) {
+            return response()->json(['message' => 'Appointment not found or unauthorized'], 403);
+        }
+
+        // Check: Sirf 'pending' appointment cancel ho sakti hai
+        if ($appointment->status !== 'pending') {
+            return response()->json(['message' => 'Cannot cancel processed appointment'], 400);
+        }
+
+        $appointment->status = 'cancelled';
+        $appointment->save();
+
+        return response()->json(['message' => 'Appointment cancelled successfully']);
+    }
+
 }

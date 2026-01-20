@@ -6,7 +6,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Laravel\Sanctum\HasApiTokens;   
+use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
@@ -17,6 +17,7 @@ class User extends Authenticatable
         'email',
         'password',
         'role', // Role add karna na bhoolen
+        'specialization',
     ];
 
     // --- Relationships ---
@@ -36,6 +37,7 @@ class User extends Authenticatable
     // Doctor ke liye: Uska schedule kya hai
     public function schedules()
     {
+        // Doctor ke bohot saray schedules ho saktay hain
         return $this->hasMany(Schedule::class, 'doctor_id');
     }
 }
