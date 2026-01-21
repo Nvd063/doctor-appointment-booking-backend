@@ -15,8 +15,8 @@ class AppointmentController extends Controller
         // 1. Basic Validation
         $request->validate([
             'doctor_id' => 'required|exists:users,id',
-            'date' => 'required|date_format:Y-m-d', // e.g., 2024-02-20
-            'time' => 'required|date_format:H:i',   // e.g., 14:00
+            'date' => 'required|date',
+            'time' => 'required'
         ]);
 
         // --- CARBON LEARNING PART STARTS HERE ---
@@ -75,7 +75,9 @@ class AppointmentController extends Controller
             'doctor_id' => $request->doctor_id,
             'appointment_date' => $request->date,
             'appointment_time' => $request->time,
-            'status' => 'pending'
+            'status' => 'pending',
+            'payment_status' => $request->payment_status ?? 'unpaid',
+
         ]);
 
 

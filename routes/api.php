@@ -41,7 +41,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/admin/users', [AdminController::class, 'getAllUsers']);
     Route::delete('/admin/users/{id}', [AdminController::class, 'deleteUser']);
 
+    Route::post('/schedule', [ScheduleController::class, 'store']);       // Add
+    Route::put('/schedule/{id}', [ScheduleController::class, 'update']);  // Update (Zaroori)
+    Route::delete('/schedule/{id}', [ScheduleController::class, 'destroy']); // Delete (Zaroori)
     
+    Route::post('/admin/add-doctor', [AdminController::class, 'addDoctor']);
 
     //profile controller
     Route::get('/profile', [ProfileController::class, 'getUser']);

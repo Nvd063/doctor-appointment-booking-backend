@@ -20,6 +20,16 @@ class User extends Authenticatable
         'specialization',
     ];
 
+
+    protected $hidden = [
+        'password',
+        'remember_token',
+    ];
+
+    protected $casts = [
+        'email_verified_at' => 'datetime',
+    ];
+
     // --- Relationships ---
 
     // Doctor ke liye: Usnay kitni appointments receive ki hain

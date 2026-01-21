@@ -9,12 +9,13 @@ class Appointment extends Model
 {
     use HasFactory;
 
-    protected $fillable = [
+protected $fillable = [
         'patient_id',
         'doctor_id',
         'appointment_date',
         'appointment_time',
         'status',
+        'payment_status'
     ];
 
     // Appointment kis patient ki hai?

@@ -10,34 +10,32 @@ use Illuminate\Validation\ValidationException;
 class AuthController extends Controller
 {
     // 1. REGISTER (Naya User)
-    public function register(Request $request)
-    {
-        $request->validate([
-            'name' => 'required|string',
-            'email' => 'required|email|unique:users',
-            'password' => 'required|min:6',
-            'role' => 'required|in:doctor,patient',
-            'specialization' => 'nullable|string' // 👈 Validation
-        ]);
+    // app/Http/Controllers/AuthController.php
 
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'role' => $request->role,
-            // 👇 Agar doctor hai to specialization save karo, warna null
-            'specialization' => $request->role === 'doctor' ? $request->specialization : null,
-        ]);
+public function register(Request $request)
+{
+    $request->validate([
+        'name' => 'required|string',
+        'email' => 'required|string|email|unique:users',
+        'password' => 'required|string|min:6'
+    ]);
 
-        // Token Generate karna
-        $token = $user->createToken('auth_token')->plainTextToken;
+    $user = User::create([
+        'name' => $request->name,
+        'email' => $request->email,
+        'password' => Hash::make($request->password),
+        'role' => 'patient' // 👈 FORCED: Public user hamesha Patient banega
+    ]);
 
-        return response()->json([
-            'message' => 'User registered successfully',
-            'user' => $user,
-            'token' => $token, // Yeh token user save kar le ga
-        ], 201);
-    }
+    $token = $user->createToken('auth_token')->plainTextToken;
+
+    return response()->json([
+        'message' => 'Registration successful',
+        'access_token' => $token,
+        'token_type' => 'Bearer',
+        'role' => 'patient'
+    ], 201);
+}
 
     // 2. LOGIN (Purana User)
     public function login(Request $request)

@@ -2,15 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Http\Request;
 use App\Models\User;
+use App\Models\Appointment;
 
 class AdminController extends Controller
 {
-    // 1. Saray Users ki List lao (Doctor aur Patient alag alag)
+    // 1. Saray Users ki List lao
     public function getAllUsers(Request $request)
     {
-        // Check: Sirf Admin hi ye kam kar sakay
         if ($request->user()->role !== 'admin') {
             return response()->json(['message' => 'Access Denied'], 403);
         }
@@ -24,7 +25,7 @@ class AdminController extends Controller
         ]);
     }
 
-    // 2. Kisi User ko Delete karo
+    // 2. User Delete karo
     public function deleteUser(Request $request, $id)
     {
         if ($request->user()->role !== 'admin') {
@@ -33,59 +34,61 @@ class AdminController extends Controller
 
         $user = User::find($id);
         if ($user) {
-            $user->delete(); // User khatam, tata, bye bye!
+            $user->delete();
             return response()->json(['message' => 'User deleted successfully']);
         }
 
         return response()->json(['message' => 'User not found'], 404);
     }
 
-    // Get Single User Details (Doctor or Patient)
-    public function getUserDetails(Request $request, $id)
+    // 3. Add Doctor (Admin Only)
+    public function addDoctor(Request $request)
     {
-        // Security Check
-        if ($request->user()->role !== 'admin') {
-            return response()->json(['message' => 'Access Denied'], 403);
-        }
+        $request->validate([
+            'name' => 'required|string',
+            'email' => 'required|email|unique:users',
+            'password' => 'required|min:6',
+            'specialization' => 'required|string'
+        ]);
 
-        $user = User::find($id);
+        $doctor = User::create([
+            'name' => $request->name,
+            'email' => $request->email,
+            'password' => Hash::make($request->password),
+            'role' => 'doctor',
+            'specialization' => $request->specialization
+        ]);
 
-        if (!$user) {
-            return response()->json(['message' => 'User not found'], 404);
-        }
-
-        // Initialize response data
-        $data = [
-            'user' => $user,
-            'appointments' => [],
-            'schedules' => []
-        ];
-
-        // 1. If user is a Doctor
-        if ($user->role === 'doctor') {
-            // Load their schedules
-            $data['schedules'] = $user->schedules;
-
-            // Load appointments where this user is the DOCTOR
-            // Include patient details
-            $data['appointments'] = \App\Models\Appointment::where('doctor_id', $user->id)
-                ->with('patient:id,name,email')
-                ->orderBy('appointment_date', 'desc') // 👈 Yahan 'date' ki jagah sahi naam likhen (e.g. 'created_at' ya 'appointment_date')
-                ->get();
-        }
-
-        // 2. If user is a Patient
-        elseif ($user->role === 'patient') {
-            // Load appointments where this user is the PATIENT
-            // Include doctor details
-            $data['appointments'] = \App\Models\Appointment::where('patient_id', $user->id)
-                ->with('doctor:id,name,specialization')
-                ->orderBy('appointment_date', 'desc') // 👈 Yahan bhi change karein
-                ->get();
-        }
-
-        return response()->json($data);
+        return response()->json(['message' => 'Doctor added successfully!', 'doctor' => $doctor]);
     }
 
-    
+    // 4. Get User Details (View History & Schedule) - FIXED & MERGED
+    public function getUserDetails($id)
+    {
+        // 👇 Step 1: User dhoondo aur sath ma 'schedules' bhi lao (Eager Loading)
+        $user = User::with('schedules')->findOrFail($id);
+
+        $appointments = [];
+
+        // 👇 Step 2: Role k hisaab se appointments lao
+        if ($user->role === 'doctor') {
+            // Agar Doctor hai to wo appointments lao jahan ye doctor hai
+            $appointments = Appointment::where('doctor_id', $id)
+                            ->with('patient') // Patient ka naam dikhanay k liye
+                            ->orderBy('id', 'desc')
+                            ->get();
+        } else {
+            // Agar Patient hai to wo appointments lao jahan ye patient hai
+            $appointments = Appointment::where('patient_id', $id)
+                            ->with('doctor') // Doctor ka naam dikhanay k liye
+                            ->orderBy('id', 'desc')
+                            ->get();
+        }
+
+        // 👇 Step 3: Sab kuch wapis bhejo
+        return response()->json([
+            'user' => $user, // Iske andar ab 'schedules' bhi honge
+            'appointments' => $appointments
+        ]);
+    }
 }

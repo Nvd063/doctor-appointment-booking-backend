@@ -4,28 +4,41 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use App\Models\User;
+use App\Models\Schedule;
 
 class ProfileController extends Controller
 {
-    // 1. User ka data bhejo (Edit form mien dikhanay k liye)
-    public function getUser(Request $request) {
-        return response()->json($request->user());
-    }
-
-    // 2. Profile Update karo
-    public function updateProfile(Request $request) {
+    // 👇 1. GET PROFILE (User + Schedule)
+    // Maine dono functions ko merge kar diya hai. Ab yehi function chalay ga.
+    public function getUser(Request $request)
+    {
+        // 1. User nikalo
         $user = $request->user();
 
-        // Validation
+        // 2. Schedule nikalo (Direct Query)
+        $schedules = Schedule::where('doctor_id', $user->id)->get();
+
+        // 3. User data k sath Schedules mix kr k bhejo
+        // $user->toArray() user ka sara data array bana deta hai, phir hum usme schedules add kr dete hain
+        $userData = $user->toArray();
+        $userData['schedules'] = $schedules;
+
+        return response()->json($userData);
+    }
+
+    // 👇 2. UPDATE PROFILE (Ye waisa hi rahe ga)
+    public function updateProfile(Request $request)
+    {
+        $user = $request->user();
+
         $request->validate([
             'name' => 'required|string|max:255',
-            'password' => 'nullable|min:6', // Password optional hai
+            'password' => 'nullable|min:6',
         ]);
 
-        // Name update
         $user->name = $request->name;
 
-        // Agar password diya hai to update karo, warna wahi rehne do
         if ($request->filled('password')) {
             $user->password = Hash::make($request->password);
         }

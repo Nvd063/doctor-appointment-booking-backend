@@ -2,36 +2,69 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Schedule;
 use Illuminate\Http\Request;
+use App\Models\Schedule;
+use Illuminate\Support\Facades\Auth;
 
 class ScheduleController extends Controller
 {
-    public function setSchedule(Request $request)
+    // 1. ADD NEW SLOT
+    public function store(Request $request)
     {
-        // 1. Validation
         $request->validate([
-            'day'        => 'required|in:Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday',
-            'start_time' => 'required|date_format:H:i',
-            'end_time'   => 'required|date_format:H:i|after:start_time', // 'after' check ensure karta hai end time bara ho
+            'day' => 'required',
+            'start_time' => 'required',
+            'end_time' => 'required'
         ]);
 
-        // 2. Save or Update Logic
-        // Hum check karen gay ke is Doctor ka is Day ka schedule pehlay se hai?
-        $schedule = Schedule::updateOrCreate(
-            [
-                'doctor_id' => $request->user()->id, // Token se Doctor ki ID
-                'day'       => $request->day,        // Din (e.g., Monday)
-            ],
-            [
-                'start_time' => $request->start_time,
-                'end_time'   => $request->end_time,
-            ]
-        );
+        $schedule = Schedule::create([
+            'doctor_id' => Auth::id(),
+            'day' => $request->day,
+            'start_time' => $request->start_time,
+            'end_time' => $request->end_time,
+        ]);
 
-        return response()->json([
-            'message' => 'Schedule updated successfully!',
-            'schedule' => $schedule
-        ], 200);
+        return response()->json(['message' => 'Slot added', 'data' => $schedule]);
+    }
+
+    // 2. UPDATE SLOT (Ye missing hoga)
+    public function update(Request $request, $id)
+    {
+        $schedule = Schedule::find($id);
+
+        if (!$schedule) {
+            return response()->json(['message' => 'Not Found'], 404);
+        }
+
+        // Check ownership
+        if ($schedule->doctor_id !== Auth::id()) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $schedule->update([
+            'day' => $request->day,
+            'start_time' => $request->start_time,
+            'end_time' => $request->end_time,
+        ]);
+
+        return response()->json(['message' => 'Updated successfully']);
+    }
+
+    // 3. DELETE SLOT (Ye bhi missing hoga)
+    public function destroy($id)
+    {
+        $schedule = Schedule::find($id);
+
+        if (!$schedule) {
+            return response()->json(['message' => 'Not Found'], 404);
+        }
+
+        if ($schedule->doctor_id !== Auth::id()) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $schedule->delete();
+
+        return response()->json(['message' => 'Deleted successfully']);
     }
 }
